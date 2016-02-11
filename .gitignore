@@ -1,1 +1,5 @@
 .env
+process.txt
+memory.txt
+sample.txt
+test.log

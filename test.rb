@@ -11,26 +11,34 @@ memory_wait = 30
 
 $pagerduty_api_key = ENV['PAGERDUTY_API_KEY']
 
-logger = Logger.new(STDOUT)
+logger = Logger.new("| tee test.log")
 logger.level = Logger::INFO
 
 def get_cpu
   # Get current cpu usage - let's check usage and iowait
   # TODO: we want to check all cpu states
-  mpstat_out = `/usr/bin/mpstat | grep all`
-  mpstat_out_ary = mpstat_out.split(' ')
+  system "top -l 1 | grep 'CPU usage' > ./sample.txt"
 
-  cpu_usage = mpstat_out_ary[3]
+  file = File.open("./sample.txt", "rb").read
+  file_arr = file.split(" ")
+
+  cpu_usage = file_arr[4]
 
   return cpu_usage.to_f
 end
 
 def getmemory
   # Get memory usage
-  free_out = `/usr/bin/free|grep ^Mem`
+  system "top -l 1 | grep PhysMem > ./memory.txt"
 
-  used = free_out.split(' ')[2].to_f
-  total = free_out.split(' ')[1].to_f
+  file = File.open("./memory.txt", "rb").read
+  file_arr = file.split(" ")
+  # print file_arr
+
+  used = file_arr[1].to_f
+  # print used
+  total = file_arr[5].to_f + used
+  # print total
 
   return (used / total) * 100
 end
