@@ -1,6 +1,7 @@
 require 'logger'
+require 'pagerduty'
 
-$pagerduty_api_key = ENV['PAGERDUTY_API_KEY']
+
 
 class Usage
   def initialize 
@@ -9,6 +10,7 @@ class Usage
     @wait = 30
     @logger = Logger.new("| tee test.log")
     @logger.level = Logger::INFO
+    @pagerduty_api_key = ENV['PAGERDUTY_API_KEY']
 
     system "top -l 1 | grep 'CPU usage' > ./sample.txt"
     file = File.open("./sample.txt", "rb").read
@@ -41,8 +43,15 @@ class Usage
 
       if @cpu_over > @tries
         @logger.info("CPU is over, alerting via pagerduty")
-        pagerduty = Pagerduty.new($pagerduty_api_key)
-        incident = pagerduty.trigger("CPU is high: #{@cpu_usage}")
+        pagerduty = Pagerduty.new(@pagerduty_api_key)
+        begin
+          incident = pagerduty.trigger("CPU is high: #{@cpu_usage}")
+        rescue Net::HTTPServerException => error
+          puts "PAGERDUTY FAILED!"
+          puts error.response.code
+          puts error.response.message
+          puts error.response.body
+        end
       end
     end
   end
@@ -65,13 +74,9 @@ class Usage
 
       if @mem_over > @tries
         @logger.info("mem is over, alerting via pagerduty")
-        pagerduty = Pagerduty.new($pagerduty_api_key)
+        pagerduty = Pagerduty.new(@pagerduty_api_key)
         begin
-          require 'sys-uname'
-          incident = pagerduty.trigger(
-            "Mem is high: #{mem_usage}",
-             client:       Sys::Uname.nodename,
-          )
+          incident = pagerduty.trigger("Mem is high: #{@mem_usage}")
         rescue Net::HTTPServerException => error
           puts "PAGERDUTY FAILED!"
           puts error.response.code
